@@ -1,0 +1,27 @@
+xN = rN1 ^ rN2 ^ rN3 ^ ... ^rN(number of revealers)
+
+function for calculating ith winners and also prizes
+
+Write as a view function
+getWinner(i)
+
+i1 = hash(xN) mod number of revealers
+i2 = hash(hash(xN)) mod number of revealers
+
+...
+
+
+write for loop with logarithmic size at most. 
+
+Pi = ⌊M /2i⌋ + (⌊M /2i− 1⌋ mod 2) i = 1,...,⌈log2(M)⌉
+
+
+Ticket Array no of purchasers
+msg.sender
+hash
+
+revealed mapping no of revealers
+hash(xN) mod number of revealers
+
+0 1 2 3
+0 2 3 5
