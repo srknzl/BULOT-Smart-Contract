@@ -12,7 +12,7 @@ Bulot contract:
 
 contract BULOTContract {
     uint constant STAGEDURATION = 604800;
-    bool isSubmission;
+    bool public isSubmission;
     uint public nextStageTimestamp;
     mapping(address=>bytes32) players;
     address[] revealedPlayers;
@@ -135,6 +135,7 @@ contract BULOTContract {
         
         uint P;
         address winner;
+        bytes32 hash = keccak256(randomAccumulator);
         for(uint i=1; i <= indexRange; i++) {
             // calculate P_i 
             M = integerDivision(M, 2);
@@ -142,7 +143,8 @@ contract BULOTContract {
             M = integerDivision(M, 2);
             P += M % 2;
             // TODO: assign the prize to the winner. done, require checks
-            winner = revealedPlayers[uint(keccak256(randomAccumulator)) % revealedPlayers.length];
+            winner = revealedPlayers[uint(hash) % revealedPlayers.length];
+            hash = keccak256(hash);
             winners[winner] += P;
         }
     }
