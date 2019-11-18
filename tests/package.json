@@ -1,0 +1,21 @@
+{
+  "name": "tests",
+  "version": "1.0.0",
+  "description": "Tests for bulot smart contract",
+  "main": "tests.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node tests.js"
+  },
+  "keywords": [
+    "test",
+    "web3js",
+    "ethereum",
+    "solidity"
+  ],
+  "author": "Serkan Özel",
+  "license": "ISC",
+  "dependencies": {
+    "web3": "^1.2.4"
+  }
+}
