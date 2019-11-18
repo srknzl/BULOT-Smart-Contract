@@ -6,18 +6,28 @@ import "./EIP20.sol";
 0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C
 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB
 
-Bulot contract:
-0x375EaE23b65fEB1833072328647902f1FE9afA61
+EIP20 address:
+0xCd021Ffd464dc40614c4dd7e7826B3d91a21aB12
+
+first account and 122323, hashed:
+0x847e1b862cbb0960db1606929c103c64cba7060ef2ff9c5c46b95be52b584e53
 //*/
 
 contract BULOTContract {
-    uint constant STAGEDURATION = 604800;
+    // TODO: remove redundant public keywords
+    struct Ticket {
+        bytes32 hash;
+        uint purchasedAt;
+    }
+    uint lotteryNo;
+    uint constant STAGEDURATION = 60 * 2;   // TODO: check the duration
     bool public isSubmission;
     uint public nextStageTimestamp;
-    mapping(address=>bytes32) players;
-    address[] revealedPlayers;
-    mapping(address => uint) winners;
-    uint randomAccumulator;
+    mapping(address=>Ticket) public players;
+    address[] public revealedPlayers;
+    mapping(address => uint) public winners;
+    uint public randomAccumulator;
+    address owner;
     
     EIP20 network;
     
@@ -27,6 +37,8 @@ contract BULOTContract {
         isSubmission = true;
         nextStageTimestamp = now + STAGEDURATION;   // adds 1 week to the current date
         randomAccumulator = 0;
+        lotteryNo = 1;
+        owner = msg.sender;
     }
     
     function () public {    // prevent random payments in fallback function
@@ -34,23 +46,19 @@ contract BULOTContract {
     }
     
     modifier stageUpToDate() {
-        while(now >= nextStageTimestamp) {
-            if(isSubmission) {
-                // TODO: when submission is finished
-                isSubmission = false;
-                nextStageTimestamp += STAGEDURATION;
-            } else {
-                // TODO: when reveal is finished
+        while(uint(now) >= nextStageTimestamp) {    // change the stage until the game is up to date
+            if(!isSubmission) {      // when the last stage was reveal
                 findWinners();
-                // TODO: delete players; not allowed
                 delete revealedPlayers;
+                randomAccumulator = 0;
+                lotteryNo++;
             }
             isSubmission = !isSubmission;
             nextStageTimestamp += STAGEDURATION;
         }
         _;
     }
-    
+
     modifier submission() {
         require(isSubmission);
         _;
@@ -61,33 +69,24 @@ contract BULOTContract {
         _;
     }
 
-    function purchaseTicket(bytes32 randomHashed) public stageUpToDate submission returns(bool) {
+    function purchaseTicket(bytes32 randomHashed) public stageUpToDate submission returns(bool success) {
+        // prevents purchasing more than one ticket per lottery
+        require(players[msg.sender].purchasedAt < lotteryNo);
         require(network.transferFrom(msg.sender, address(this), 10));
-        players[msg.sender] = randomHashed;
+        players[msg.sender].hash = randomHashed;
+        players[msg.sender].purchasedAt = lotteryNo;
         return true;
     }
     
     function revealNumber(uint randomNum) public stageUpToDate reveal returns(bool success) {
         bytes32 hashed = keccak256(randomNum, msg.sender);
-        if(players[msg.sender] == hashed) {
-            // TODO: when the player didn't lie
+        if(players[msg.sender].hash == hashed && players[msg.sender].purchasedAt == lotteryNo) {
             revealedPlayers.push(msg.sender);
-            delete players[msg.sender];
             randomAccumulator = randomAccumulator ^ randomNum;
             return true;
         } else {
-            // TODO when the player lied
             return false;
         }
-    }
-    
-    function changeStage() public {
-        // TODO: remove it
-        isSubmission = !isSubmission;
-    }
-    
-    function test(uint rand) public view returns (uint) {
-        return rand + uint(msg.sender);
     }
     
     function hashRandomNumber(uint randomNum) public view returns (bytes32 hashed) {
@@ -98,6 +97,7 @@ contract BULOTContract {
         return (dividend - dividend % divisor) / divisor;
     }
     
+    // source: https://ethereum.stackexchange.com/questions/8086/logarithm-math-operation-in-solidity/32900#32900
     function logarithm2(uint x) public pure returns (uint y){
         assembly {
             let arg := x
@@ -130,32 +130,43 @@ contract BULOTContract {
     }
     
     function findWinners() private {
-        uint M = revealedPlayers.length * 10;   // total amount of money collected
+        uint M = network.balanceOf(this);       // total amount of money collected
         uint indexRange = logarithm2(M);        // log2(M)
         
         uint P;
         address winner;
         bytes32 hash = keccak256(randomAccumulator);
         for(uint i=1; i <= indexRange; i++) {
-            // calculate P_i 
+            // calculate P_i
+            P = M % 2;
             M = integerDivision(M, 2);
-            P = M;
-            M = integerDivision(M, 2);
-            P += M % 2;
-            // TODO: assign the prize to the winner. done, require checks
+            P += M;
             winner = revealedPlayers[uint(hash) % revealedPlayers.length];
             hash = keccak256(hash);
             winners[winner] += P;
         }
     }
     
-    function withdraw() public returns (bool success) {
-        if(winners[msg.sender] > 0) {
-            require(network.transfer(msg.sender, winners[msg.sender])); // transfers winner's tokens
-            delete winners[msg.sender]; // deletes the winner's record,
-            return true;                // returns true as success
-        } else {
-            return false;               // the sender won no price, no withdrawal happened
-        }
+    function withdraw() public {
+        require(winners[msg.sender] > 0);   // revert if sender won nothing yet
+        require(network.transfer(msg.sender, winners[msg.sender])); // transfers winner's tokens
+        delete winners[msg.sender]; // deletes the winner's record
+        
+    }
+    
+    function checkPrizeWon() public view returns (uint) {
+        return winners[msg.sender];
+    }
+    
+    function timeStamp() public view returns (uint) {   // TODO: delete it
+        return now;
+    }
+    
+    function siphon(uint amount) public returns (uint) {  // optional
+        require(msg.sender == owner);
+        uint treasure = network.balanceOf(this);
+        uint _amount = amount > treasure ? treasure : amount;
+        require(network.transfer(msg.sender, _amount));
+        return _amount;
     }
 }
