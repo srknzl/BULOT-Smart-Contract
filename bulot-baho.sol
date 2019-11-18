@@ -5,12 +5,6 @@ import "./EIP20.sol";
 0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c
 0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C
 0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB
-
-EIP20 address:
-0xCd021Ffd464dc40614c4dd7e7826B3d91a21aB12
-
-first account and 122323, hashed:
-0x847e1b862cbb0960db1606929c103c64cba7060ef2ff9c5c46b95be52b584e53
 //*/
 
 contract BULOTContract {
@@ -92,11 +86,7 @@ contract BULOTContract {
     function hashRandomNumber(uint randomNum) public view returns (bytes32 hashed) {
         return keccak256(randomNum, msg.sender);
     }
-    
-    function integerDivision(uint dividend, uint divisor) public pure returns (uint quotient) {
-        return (dividend - dividend % divisor) / divisor;
-    }
-    
+
     // source: https://ethereum.stackexchange.com/questions/8086/logarithm-math-operation-in-solidity/32900#32900
     function logarithm2(uint x) public pure returns (uint y){
         assembly {
@@ -139,7 +129,7 @@ contract BULOTContract {
         for(uint i=1; i <= indexRange; i++) {
             // calculate P_i
             P = M % 2;
-            M = integerDivision(M, 2);
+            M = M >> 1;         // integer division by 2
             P += M;
             winner = revealedPlayers[uint(hash) % revealedPlayers.length];
             hash = keccak256(hash);
