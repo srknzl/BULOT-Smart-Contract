@@ -1,0 +1,1 @@
+parity --geth --config dev --base-path C:\Users\serka\Desktop\PARITYDATA --allow-ips=private --no-discovery --jsonrpc-apis="eth,net,web3,personal" --rpccorsdomain="*" --jsonrpc-port="8545" --jsonrpc-cors="all" 
