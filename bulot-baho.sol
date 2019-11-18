@@ -26,6 +26,7 @@ contract BULOTContract {
     EIP20 network;
     
     function BULOTContract(address _network) public {
+        require(_network > 0);
         network = EIP20(_network);
         // TODO: make it not create when _network isn't given
         isSubmission = true;
