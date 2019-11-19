@@ -1,0 +1,1 @@
+geth attach --exec 'loadScript("abi.js"); loadScript("test.js");'
