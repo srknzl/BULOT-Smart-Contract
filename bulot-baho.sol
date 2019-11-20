@@ -1,45 +1,38 @@
 pragma solidity >=0.4.21;
-// TODO: check comments. and their consistency
+
 import "./EIP20.sol";
-/*
-0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c
-0x14723A09ACff6D2A60DcdF7aA4AFf308FDDC160C
-0x4B0897b0513fdC7C541B6d9D7E929C4e5364D2dB
-//*/
 
 contract BULOTContract {
-    // TODO: remove redundant public keywords
     struct Ticket {
         bytes32 hash;
         uint purchasedAt;
     }
+
     uint lotteryNo;
-    uint constant STAGEDURATION = 60 * 2;   // TODO: check the duration
-    bool public isSubmission;
-    uint public nextStageTimestamp;
-    mapping(address=>Ticket) public players;
-    address[] public revealedPlayers;
-    mapping(address => uint) public winners;
-    uint public randomAccumulator;
+    uint constant STAGEDURATION = 7 * 24 * 60 * 60; // TODO: check the duration
+    bool isSubmission;
+    uint nextStageTimestamp;
+    mapping(address=>Ticket) players;
+    address[] revealedPlayers;
+    mapping(address => uint) winners;
+    uint randomAccumulator;
     address owner;
-    
+
     EIP20 network;
-    
+
     function BULOTContract(address _network) public {
-        require(_network > 0);
         network = EIP20(_network);
-        // TODO: make it not create when _network isn't given
         isSubmission = true;
         nextStageTimestamp = now + STAGEDURATION;   // adds 1 week to the current date
         randomAccumulator = 0;
         lotteryNo = 1;
         owner = msg.sender;
     }
-    
+
     function () public {    // prevent random payments in fallback function
         revert();
     }
-    
+
     modifier stageUpToDate() {
         while(uint(now) >= nextStageTimestamp) {    // change the stage until the game is up to date
             if(!isSubmission) {      // when the last stage was reveal
@@ -58,7 +51,7 @@ contract BULOTContract {
         require(isSubmission);
         _;
     }
-    
+
     modifier reveal() {
         require(!isSubmission);
         _;
@@ -72,7 +65,7 @@ contract BULOTContract {
         players[msg.sender].purchasedAt = lotteryNo;
         return true;
     }
-    
+
     function revealNumber(uint randomNum) public stageUpToDate reveal returns(bool success) {
         bytes32 hashed = keccak256(randomNum, msg.sender);
         if(players[msg.sender].hash == hashed && players[msg.sender].purchasedAt == lotteryNo) {
@@ -119,15 +112,15 @@ contract BULOTContract {
             y := add(y, mul(256, gt(arg, 0x8000000000000000000000000000000000000000000000000000000000000000)))
         }
     }
-    
+
     function findWinners() private {
         uint M = network.balanceOf(this);       // total amount of money collected
         uint indexRange = logarithm2(M);        // log2(M)
-        
+
         uint P;
         address winner;
         bytes32 hash = keccak256(randomAccumulator);
-        for(uint i=1; i <= indexRange; i++) {
+        for(uint i = 1; i <= indexRange; i++) {
             // calculate P_i
             P = M % 2;
             M = M >> 1;         // integer division by 2
@@ -147,17 +140,5 @@ contract BULOTContract {
     
     function checkPrizeWon() public view returns (uint) {
         return winners[msg.sender];
-    }
-    
-    function timeStamp() public view returns (uint) {   // TODO: delete it
-        return now;
-    }
-    
-    function siphon(uint amount) public returns (uint) {  // optional
-        require(msg.sender == owner);
-        uint treasure = network.balanceOf(this);
-        uint _amount = amount > treasure ? treasure : amount;
-        require(network.transfer(msg.sender, _amount));
-        return _amount;
     }
 }
