@@ -17,8 +17,10 @@ contract BULOTContract {
     mapping(address => uint) winners;
     uint randomAccumulator;
     address owner;
-
     EIP20 network;
+
+    event PurchaseTicket(address sender, bytes32 randomHashed);
+    event RevealNumber(address sender, uint randomNum);
 
     function BULOTContract(address _network) public {
         network = EIP20(_network);
@@ -36,7 +38,6 @@ contract BULOTContract {
     modifier stageUpToDate() {
         while(uint(now) >= nextStageTimestamp) {    // change the stage until the game is up to date
             if(!isSubmission) {      // when the last stage was reveal
-                findWinners();
                 delete revealedPlayers;
                 randomAccumulator = 0;
                 lotteryNo++;
@@ -63,6 +64,7 @@ contract BULOTContract {
         require(network.transferFrom(msg.sender, address(this), 10));
         players[msg.sender].hash = randomHashed;
         players[msg.sender].purchasedAt = lotteryNo;
+        emit PurchaseTicket(msg.sender,randomHashed);
         return true;
     }
 
@@ -71,6 +73,7 @@ contract BULOTContract {
         if(players[msg.sender].hash == hashed && players[msg.sender].purchasedAt == lotteryNo) {
             revealedPlayers.push(msg.sender);
             randomAccumulator = randomAccumulator ^ randomNum;
+            emit RevealNumber();
             return true;
         } else {
             return false;
@@ -113,23 +116,43 @@ contract BULOTContract {
         }
     }
 
-    function findWinners() private {
-        uint M = network.balanceOf(this);       // total amount of money collected
-        uint indexRange = logarithm2(M);        // log2(M)
 
-        uint P;
-        address winner;
-        bytes32 hash = keccak256(randomAccumulator);
-        for(uint i = 1; i <= indexRange; i++) {
-            // calculate P_i
-            P = M % 2;
-            M = M >> 1;         // integer division by 2
-            P += M;
-            winner = revealedPlayers[uint(hash) % revealedPlayers.length];
-            hash = keccak256(hash);
-            winners[winner] += P;
-        }
-    }
+    // TODO: Write two functions like this using for loops(hoca dedi): 
+
+    // function findWinner(uint ith) public view {
+    //     uint M = network.balanceOf(this);       // total amount of money collected
+    //     uint indexRange = logarithm2(M);        // log2(M)
+
+    //     uint P;
+    //     address winner;
+    //     bytes32 hash = keccak256(randomAccumulator);
+    //     for(uint i = 1; i <= indexRange; i++) {
+    //         // calculate P_i
+    //         P = M % 2;
+    //         M = M >> 1;         // integer division by 2
+    //         P += M;
+    //         winner = revealedPlayers[uint(hash) % revealedPlayers.length];
+    //         hash = keccak256(hash);
+    //         winners[winner] += P;
+    //     }
+    // }
+    // function getPrize(uint ith) private {
+    //     uint M = network.balanceOf(this);       // total amount of money collected
+    //     uint indexRange = logarithm2(M);        // log2(M)
+
+    //     uint P;
+    //     address winner;
+    //     bytes32 hash = keccak256(randomAccumulator);
+    //     for(uint i = 1; i <= indexRange; i++) {
+    //         // calculate P_i
+    //         P = M % 2;
+    //         M = M >> 1;         // integer division by 2
+    //         P += M;
+    //         winner = revealedPlayers[uint(hash) % revealedPlayers.length];
+    //         hash = keccak256(hash);
+    //         winners[winner] += P;
+    //     }
+    // }
     
     function withdraw() public {
         require(winners[msg.sender] > 0);   // revert if sender won nothing yet
