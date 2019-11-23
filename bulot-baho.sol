@@ -1,83 +1,91 @@
-pragma solidity >=0.4.21;
+pragma solidity ^0.4.22;
 
 import "./EIP20.sol";
 
-contract BULOTContract {
+contract BULOT {
     struct Ticket {
         bytes32 hash;
         uint purchasedAt;
     }
-
-    uint lotteryNo;
-    uint constant STAGEDURATION = 7 * 24 * 60 * 60; // TODO: check the duration
-    bool isSubmission;
-    uint nextStageTimestamp;
-    mapping(address=>Ticket) players;
-    address[] revealedPlayers;
-    mapping(address => uint) winners;
-    uint randomAccumulator;
-    address owner;
+    
+    struct Game {
+        uint256 totalPrize;
+        address[] revealedPlayers;
+        mapping(uint=>bool) withdrawnPrizes; 
+        uint randomNumber;
+        mapping(address=>Ticket) players;
+    }
+    
+    uint constant STAGEDURATION = 60; // TODO: check the duration
+    mapping(uint=>Game) public games;
+    uint start;
+    
     EIP20 network;
-
+    
     event PurchaseTicket(address sender, bytes32 randomHashed);
     event RevealNumber(address sender, uint randomNum);
-
-    function BULOTContract(address _network) public {
-        network = EIP20(_network);
-        isSubmission = true;
-        nextStageTimestamp = now + STAGEDURATION;   // adds 1 week to the current date
-        randomAccumulator = 0;
-        lotteryNo = 1;
-        owner = msg.sender;
-    }
-
-    function () public {    // prevent random payments in fallback function
+    event PrizeWithdrawn(address _player, uint _lotteryNo, uint _index);
+    
+    function () public {    // prevents random payments in fallback function
         revert();
     }
 
-    modifier stageUpToDate() {
-        while(uint(now) >= nextStageTimestamp) {    // change the stage until the game is up to date
-            if(!isSubmission) {      // when the last stage was reveal
-                delete revealedPlayers;
-                randomAccumulator = 0;
-                lotteryNo++;
-            }
-            isSubmission = !isSubmission;
-            nextStageTimestamp += STAGEDURATION;
-        }
-        _;
+    constructor(address _network) public {
+        network = EIP20(_network);
+        start = now;
+    }
+    
+    function getCurrentLotteryNo() public view returns (uint) {
+        return (now - start) / (2 * STAGEDURATION) + 1;
+    }
+
+    function isSubmissionStage() public view returns (bool) {
+        return (now - start) % (2 * STAGEDURATION) < STAGEDURATION;
     }
 
     modifier submission() {
-        require(isSubmission);
+        require(isSubmissionStage(), 'Not in submission stage');
         _;
     }
-
+    
     modifier reveal() {
-        require(!isSubmission);
+        require(!isSubmissionStage(), 'Not in reveal stage');
         _;
     }
-
-    function purchaseTicket(bytes32 randomHashed) public stageUpToDate submission returns(bool success) {
+    
+    function purchaseTicket(bytes32 randomHashed) public submission returns(bool success) {
+        uint lotteryNo = getCurrentLotteryNo();
         // prevents purchasing more than one ticket per lottery
-        require(players[msg.sender].purchasedAt < lotteryNo);
-        require(network.transferFrom(msg.sender, address(this), 10));
-        players[msg.sender].hash = randomHashed;
-        players[msg.sender].purchasedAt = lotteryNo;
-        emit PurchaseTicket(msg.sender,randomHashed);
+        require(
+            games[lotteryNo].players[msg.sender].hash == 0,
+            'Already bought a ticket in the current lottery');
+        require(
+            network.transferFrom(msg.sender, address(this), 10),
+            'The payment failed. Please allow the transfer of 10 TL to the address of that contract');
+        games[lotteryNo].players[msg.sender].hash = randomHashed;
+        games[lotteryNo].players[msg.sender].purchasedAt = lotteryNo;
+        games[lotteryNo].totalPrize += 10;
+        emit PurchaseTicket(msg.sender, randomHashed);
         return true;
     }
-
-    function revealNumber(uint randomNum) public stageUpToDate reveal returns(bool success) {
+    
+    function revealNumber(uint randomNum) public reveal returns(bool success) {
         bytes32 hashed = keccak256(randomNum, msg.sender);
-        if(players[msg.sender].hash == hashed && players[msg.sender].purchasedAt == lotteryNo) {
-            revealedPlayers.push(msg.sender);
-            randomAccumulator = randomAccumulator ^ randomNum;
-            emit RevealNumber();
-            return true;
-        } else {
-            return false;
-        }
+        uint lotteryNo = getCurrentLotteryNo();
+        // verifies the sender bought a ticket in the current lottery
+        require(
+            games[lotteryNo].players[msg.sender].purchasedAt == lotteryNo,
+            "Haven't bought a ticket in the current lottery or already revealed your random number");
+        require(
+        // verifies the sender is revealing the number he committed in the submission stage
+        games[lotteryNo].players[msg.sender].hash == hashed,
+        'Failed submitted random number revelation attempt');
+        
+        games[lotteryNo].revealedPlayers.push(msg.sender);
+        games[lotteryNo].randomNumber ^= randomNum;
+        delete games[lotteryNo].players[msg.sender].purchasedAt;
+        emit RevealNumber(msg.sender, randomNum);
+        return true;
     }
     
     function hashRandomNumber(uint randomNum) public view returns (bytes32 hashed) {
@@ -85,6 +93,7 @@ contract BULOTContract {
     }
 
     // source: https://ethereum.stackexchange.com/questions/8086/logarithm-math-operation-in-solidity/32900#32900
+    // ceils the result of log_2(x)
     function logarithm2(uint x) public pure returns (uint y){
         assembly {
             let arg := x
@@ -115,53 +124,50 @@ contract BULOTContract {
             y := add(y, mul(256, gt(arg, 0x8000000000000000000000000000000000000000000000000000000000000000)))
         }
     }
-
-
-    // TODO: Write two functions like this using for loops(hoca dedi): 
-
-    // function findWinner(uint ith) public view {
-    //     uint M = network.balanceOf(this);       // total amount of money collected
-    //     uint indexRange = logarithm2(M);        // log2(M)
-
-    //     uint P;
-    //     address winner;
-    //     bytes32 hash = keccak256(randomAccumulator);
-    //     for(uint i = 1; i <= indexRange; i++) {
-    //         // calculate P_i
-    //         P = M % 2;
-    //         M = M >> 1;         // integer division by 2
-    //         P += M;
-    //         winner = revealedPlayers[uint(hash) % revealedPlayers.length];
-    //         hash = keccak256(hash);
-    //         winners[winner] += P;
-    //     }
-    // }
-    // function getPrize(uint ith) private {
-    //     uint M = network.balanceOf(this);       // total amount of money collected
-    //     uint indexRange = logarithm2(M);        // log2(M)
-
-    //     uint P;
-    //     address winner;
-    //     bytes32 hash = keccak256(randomAccumulator);
-    //     for(uint i = 1; i <= indexRange; i++) {
-    //         // calculate P_i
-    //         P = M % 2;
-    //         M = M >> 1;         // integer division by 2
-    //         P += M;
-    //         winner = revealedPlayers[uint(hash) % revealedPlayers.length];
-    //         hash = keccak256(hash);
-    //         winners[winner] += P;
-    //     }
-    // }
     
-    function withdraw() public {
-        require(winners[msg.sender] > 0);   // revert if sender won nothing yet
-        require(network.transfer(msg.sender, winners[msg.sender])); // transfers winner's tokens
-        delete winners[msg.sender]; // deletes the winner's record
+    function checkPrizeWon(uint _lotteryNo, uint _index, address _player) public view returns (uint prize) {
+        uint lotteryNo = getCurrentLotteryNo();
         
+        // cannot ask if the sender has won any prize in the future
+        require(_lotteryNo < lotteryNo, "The lottery with given number hasn't finished yet");        
+        
+        Game storage gameAsked = games[_lotteryNo]; 
+        uint M = gameAsked.totalPrize;  // total amount of money collected in the game with given number
+        
+        uint indexRange = logarithm2(M);        // log2(M)
+        require(_index < indexRange, "no winner in that position and beyond");
+
+        uint P;
+        bytes32 hash = keccak256(gameAsked.randomNumber);
+        for(uint i=0; i <= _index; i++) {
+            // calculate P_i
+            P = M % 2;
+            M = M >> 1;         // integer division by 2
+            P += M;
+            hash = keccak256(hash);
+        }
+        
+        address winner = gameAsked.revealedPlayers[uint(hash) % gameAsked.revealedPlayers.length];
+        if(winner == _player) {
+            return P;
+        }
+        else {
+            return 0;
+        }
     }
     
-    function checkPrizeWon() public view returns (uint) {
-        return winners[msg.sender];
+    function withdraw(uint _lotteryNo, uint _index) public {
+        uint prize = checkPrizeWon(_lotteryNo, _index, msg.sender);
+        require(prize > 0, 'Won no prize, sorry.');     // revert if sender won nothing yet
+        
+        // verifies the player hasn't withdrawn his prize
+        require(games[_lotteryNo].withdrawnPrizes[_index] == false, "Already withdrawn the prize");
+        
+        require(            // transfers winner's tokens
+            network.transfer(msg.sender, prize),
+            "Failed to transfer your prize to your address, somehow.");
+        
+        games[_lotteryNo].withdrawnPrizes[_index] = true;    // marks the prize as paid
+        emit PrizeWithdrawn(msg.sender, _lotteryNo, _index);
     }
 }
