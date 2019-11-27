@@ -1,40 +1,12 @@
 loadScript('EIP20.js');
 loadScript('BULOTContract.js');
 
-var eip20address = "0x77Ab6ef8A3b37613941d41663Fa070773Ea273C0";
+var eip20address = "0xB2f196741B73685981e38B79de1141D6309043BA";
 var eip20network = web3.eth.contract(eip20abi).at(eip20address);
 
-var bulotAddress = "0x842afFC814e5FF3492cB50f8C9c3cD874471c2B8";
+var bulotAddress = "0xCf5b1643a8fCE04b3c4b892Cbf3D6FEF6Bbda182";
 var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
 
-var purchaseTicketEvent = bulotNetwork.PurchaseTicket();
-purchaseTicketEvent.watch(function (error, result) {
-    if (!error)
-        console.log("A person with address ", result.args.sender, " has purchased a ticket with ", result.args.randomHashed, " random hash.");
-    else console.log(error);
-});
-
-var revealNumberEvent = bulotNetwork.RevealNumber();
-revealNumberEvent.watch(function (error, result) {
-    if (!error)
-        console.log("A person with address ", result.args.sender, " has revealed his/her number: ", result.args.randomNum, ".");
-    else console.log(error);
-});
-
-var prizeWithdrawnEvent = bulotNetwork.PrizeWithdrawn();
-purchaseTicketEvent.watch(function (error, result) {
-    if (!error)
-        console.log(result.args._index, "st/nd/th winner with address ", result.arg._player, " withdraws his/her prize during lottery ", result.args._lotteryNo, ".")
-    else console.log(error);
-});
-
-var accountNumber = eth.accounts.length;
-if (accountNumber < 1000) {
-    console.log("Creating " + 10 - accountNumber + " more accounts to make total accounts 1000");
-    for (var i = 0; i < 10 - accountNumber; i++) {
-        personal.newAccount("pass");
-    }
-}
 console.log("Number of accounts:", eth.accounts.length);
 console.log("Making every accounts balance 10 ethers...");
 personal.unlockAccount(eth.accounts[0], '');
@@ -84,20 +56,67 @@ for (var i = 1; i < 1000; i++) { // Everyone buys a ticket
 }
 
 
-setTimeout(function () {
-    console.log("Revealing after 300 seconds..");
-
-    personal.unlockAccount(eth.accounts[0], '');
-    var success = bulotNetwork.revealNumber(randomNumbers[0], {
-        from: eth.accounts[0]
-    });
-    console.log("Reveal account 0: ", success);
-
-    for (var i = 1; i < 1000; i++) { // Everyone buys a ticket 
-        personal.unlockAccount(eth.accounts[i], 'pass');
-        var success = bulotNetwork.revealNumber(randomNumbers[i], {
-            from: eth.accounts[i]
+var revealInterval = setInterval(function () {
+    console.log("Revealing trial");
+    var isSubmission = bulotNetwork.isSubmissionStage();
+    if(isSubmission){
+        console.log("Submission ended, revealing")
+        personal.unlockAccount(eth.accounts[0], '');
+        bulotNetwork.revealNumber(randomNumbers[0], {
+            from: eth.accounts[0]
         });
-        console.log("Reveal account ",i," :", success);
+    
+        for (var i = 1; i < 1000; i++) { // Everyone buys a ticket 
+            personal.unlockAccount(eth.accounts[i], 'pass');
+            bulotNetwork.revealNumber(randomNumbers[i], {
+                from: eth.accounts[i]
+            });
+        }
+    }else {
+        console.log("Submission not ended. Will try to start revealing again in 100 seconds.")
     }
-}, 300 * 1000);
+    
+
+}, 100 * 1000);
+
+var withdrawInterval = setInterval(function () {
+    console.log("Withdraw trial");
+    var isSubmission = bulotNetwork.isSubmissionStage();
+    var currentLotteryNo = bulotNetwork.getCurrentLotteryNo();
+
+    if(isSubmission && currentLotteryNo == 2){
+
+        personal.unlockAccount(eth.accounts[0], '');
+        for(var i =0;i<15;i++){ // Log2 10000 = 14
+            var prize = bulotNetwork.checkPrizeWon(1,i,eth.accounts[0], {
+                from: eth.accounts[0]
+            });
+            if(prize > 0){
+                bulotNetwork.withdraw(1,1, {
+                    from: eth.accounts[0]
+                });
+            }
+        }
+       
+    
+        for (var i = 1; i < 1000; i++) {  
+            personal.unlockAccount(eth.accounts[i], 'pass');
+            for(var j =0;j<15;j++){ // Log2 10000 = 14
+                var prize = bulotNetwork.checkPrizeWon(1,j,eth.accounts[i], {
+                    from: eth.accounts[i]
+                });
+                if(prize > 0){
+                    bulotNetwork.withdraw(1,j, {
+                        from: eth.accounts[i]
+                    });
+                }
+            }
+        }
+    }else {
+        console.log("Lottery not ended. Will try to start withdrawing again in 100 seconds.")
+        clearInterval(revealInterval);
+        clearInterval(withdrawInterval);
+        console.log("Simulation ends..");
+    }
+    
+}, 100 * 1000);

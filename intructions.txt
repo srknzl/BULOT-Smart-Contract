@@ -1,0 +1,4 @@
+Deploy contracts.
+Set addresses in watchers.js and baho-test.js
+Run watcher.js for events in one geth attach console
+In anohter console run baho-test.js
