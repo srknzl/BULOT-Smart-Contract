@@ -112,11 +112,12 @@ var withdrawInterval = setInterval(function () {
                 }
             }
         }
-    }else {
-        console.log("Lottery not ended. Will try to start withdrawing again in 100 seconds.")
         clearInterval(revealInterval);
         clearInterval(withdrawInterval);
         console.log("Simulation ends..");
+    }else {
+        console.log("Lottery not ended. Will try to start withdrawing again in 100 seconds.")
+       
     }
     
 }, 100 * 1000);
