@@ -1,10 +1,10 @@
 loadScript('EIP20.js');
 loadScript('BULOTContract.js');
 
-var eip20address = "0xB2f196741B73685981e38B79de1141D6309043BA";
+var eip20address = "0x4af1202B6F80a10Ec1b46852fC758affE9cBee00";
 var eip20network = web3.eth.contract(eip20abi).at(eip20address);
 
-var bulotAddress = "0xCf5b1643a8fCE04b3c4b892Cbf3D6FEF6Bbda182";
+var bulotAddress = "0x2146276F32F36C9117964d7dba51E64E9F0E6453";
 var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
 
 console.log("Number of accounts:", eth.accounts.length);
@@ -59,7 +59,7 @@ for (var i = 1; i < 1000; i++) { // Everyone buys a ticket
 var revealInterval = setInterval(function () {
     console.log("Revealing trial");
     var isSubmission = bulotNetwork.isSubmissionStage();
-    if(isSubmission){
+    if(!isSubmission){
         console.log("Submission ended, revealing")
         personal.unlockAccount(eth.accounts[0], '');
         bulotNetwork.revealNumber(randomNumbers[0], {
@@ -117,7 +117,6 @@ var withdrawInterval = setInterval(function () {
         console.log("Simulation ends..");
     }else {
         console.log("Lottery not ended. Will try to start withdrawing again in 100 seconds.")
-       
     }
     
 }, 100 * 1000);
