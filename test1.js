@@ -1,10 +1,10 @@
 loadScript('EIP20.js');
 loadScript('BULOTContract.js');
 
-var eip20address = "0x1A7bE9b876113220976E3f4CD1245C3Ac3568e06";
+var eip20address = "0xC06F1F30f07bD26623086971F8f58134B7F5E993";
 var eip20network = web3.eth.contract(eip20abi).at(eip20address);
 
-var bulotAddress = "0x9ec121B70dC72c94Db42F934eAEA81a55638d6a9";
+var bulotAddress = "0xb90EA388086e231070f1760443b3Ae0E3a63E7F5";
 var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
 
 var ACCOUNTCOUNT = 10; // Number of accounts in the simulation
@@ -127,7 +127,7 @@ var withdrawInterval = setInterval(function () {
                 });
                 if (prize > 0) {
                     console.log("Withdraw:", prize ,"tl prize won by account ", index," as ", j,"th winner.");
-                    totalPrize += prize;
+                    totalPrize += Number(prize);
                     bulotNetwork.withdraw(1, j, {
                         from: account
                     });
