@@ -1,1 +1,0 @@
-geth attach --exec 'loadScript("test-v2.js");'

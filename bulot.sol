@@ -16,7 +16,7 @@ contract BULOT {
         mapping(address=>Ticket) players;
     }
     
-    uint constant STAGEDURATION = 60; // TODO: check the duration
+    uint constant STAGEDURATION = 2 weeks; 
     mapping(uint=>Game) public games;
     uint start;
     
