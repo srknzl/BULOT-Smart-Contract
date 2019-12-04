@@ -1,10 +1,10 @@
 loadScript('EIP20.js');
 loadScript('BULOTContract.js');
 
-var eip20address = "0x53c253186741E9A1D55dD415293430EDd586768a";
+var eip20address = "0x1A7bE9b876113220976E3f4CD1245C3Ac3568e06";
 var eip20network = web3.eth.contract(eip20abi).at(eip20address);
 
-var bulotAddress = "0x5f974edD3B8b244F33DE8bf6754b708517a63334";
+var bulotAddress = "0x9ec121B70dC72c94Db42F934eAEA81a55638d6a9";
 var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
 
 var ACCOUNTCOUNT = 10; // Number of accounts in the simulation
@@ -73,7 +73,7 @@ var revealed = false;
 
 
 // Ticket buying
-eth.accounts.forEach(function (account,index) {
+eth.accounts.slice(0,ACCOUNTCOUNT).forEach(function (account,index) {
     personal.unlockAccount(eth.accounts[0], '');
     eip20network.transfer(account, 10, {
         from: eth.accounts[0]
@@ -99,7 +99,7 @@ var revealInterval = setInterval(function () {
         console.log("Reveal: Trial");
         var isSubmission = bulotNetwork.isSubmissionStage();
         if (!isSubmission) {
-            eth.accounts.forEach(function (account, index) {
+            eth.accounts.slice(0,ACCOUNTCOUNT).forEach(function (account, index) {
                 console.log("Account ",index," reveals his or her number ",randomNumbers[index]);
                 personal.unlockAccount(account, '');
                 bulotNetwork.revealNumber(randomNumbers[index], {
@@ -119,7 +119,7 @@ var withdrawInterval = setInterval(function () {
     var currentLotteryNo = bulotNetwork.getCurrentLotteryNo();
 
     if (isSubmission && currentLotteryNo == 2) {
-        eth.accounts.forEach(function (account, index) {
+        eth.accounts.slice(0,ACCOUNTCOUNT).forEach(function (account, index) {
             personal.unlockAccount(account, '');
             for (var j = 0; j < Math.ceil(Math.LOG2E * Math.log(ACCOUNTCOUNT*10)); j++) {  // This is how log2 is taken in geth console
                 var prize = bulotNetwork.checkPrizeWon(1, j, account, {
