@@ -9,7 +9,7 @@ var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
 
 var ACCOUNTCOUNT = 100; // Number of accounts in the simulation
 var coinBaseIndex = 0; // Sometimes index of the coinbase account becomes different
-// after creation of accounts, it will be founc if it is different
+// after creation of accounts, it will be found if it is different
 /*
 
 Example 10 people simulation
