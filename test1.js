@@ -36,15 +36,16 @@ if (accountNumber < ACCOUNTCOUNT) {
 
 console.log("Making every accounts balance 10 ethers...");
 
-eth.accounts.forEach(function (account,index) { // Sometimes index of the coinbase account becomes different
-                                                // after creation of accounts, find it here
-    if(eth.getBalance(account) > new BigNumber(1e30) ){
+eth.accounts.forEach(function (account,index) {
+     // Sometimes index of the coinbase account becomes different after creation of accounts, find it here
+    if(eth.getBalance(account) > 1e30 ){
         coinBaseIndex = index;
     }
 });
+console.log("Coinbase account: ", coinBaseIndex);
 eth.accounts.forEach(function (account, index) { // Send 10 ethers from account 0 to other accounts
     var balance = eth.getBalance(account);
-    if (balance < new BigNumber(1e9) && index != coinBaseIndex) { // If account has less than 10 ethers send 10 ethers for gas costs 
+    if (balance < 1e9 && index != coinBaseIndex) { // If account has less than 10 ethers send 10 ethers for gas costs 
         var tx = { from: eth.accounts[coinBaseIndex], to: account, value: 1e19 };
         personal.sendTransaction(tx, "");
     }
@@ -119,7 +120,7 @@ var withdrawInterval = setInterval(function () {
     if (isSubmission && currentLotteryNo == 2) {
         eth.accounts.forEach(function (account, index) {
             personal.unlockAccount(account, '');
-            for (var j = 0; j < 7; j++) { // Log2 100 = 6,7
+            for (var j = 0; j < Math.ceil(Math.LOG2E * Math.log(ACCOUNTCOUNT*10)); j++) {  // This is how log2 is taken in geth console
                 var prize = bulotNetwork.checkPrizeWon(1, j, account, {
                     from: account
                 });
