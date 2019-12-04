@@ -28,7 +28,7 @@ console.log("Number of accounts:", eth.accounts.length);
 personal.unlockAccount(eth.accounts[0], '');
 
 var accountNumber = eth.accounts.length;
-if (accountNumber < ACCOUNTCOUNT) {
+if (accountNumber < ACCOUNTCOUNT) { // create more accounts if there aren't enough of them
     console.log("Creating " + (ACCOUNTCOUNT - accountNumber) + " more accounts to make total accounts ", ACCOUNTCOUNT);
     for (var i = 0; i < ACCOUNTCOUNT - accountNumber; i++) {
         personal.newAccount("");
