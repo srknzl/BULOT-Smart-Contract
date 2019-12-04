@@ -67,12 +67,12 @@ var blockCreationInterval = setInterval(function () {
 
 
 
-// Random numbers that will be used to reveal
+// Random numbers that will be used to reveal.
 var randomNumbers = new Array();
-var revealed = false;
+var revealed = false; // This is for checking if revealing ended so that console logs hidden in reveal interval 
 
 
-// Ticket buying
+// Ticket buying. Only accounts 0 to ACCOUNTNUMBER are attended to lottery.
 eth.accounts.slice(0,ACCOUNTCOUNT).forEach(function (account,index) {
     personal.unlockAccount(eth.accounts[0], '');
     eip20network.transfer(account, 10, {
@@ -93,7 +93,8 @@ eth.accounts.slice(0,ACCOUNTCOUNT).forEach(function (account,index) {
     console.log("Account ",index," buys a ticket with random hashed ",hashed);
 });
 
-
+// This will try to start reveal stage every 30 seconds. Only accounts 0 to ACCOUNTNUMBER are attended to lottery.
+// Random numbers are in randomNumbers array that is formed in ticket buying stage.
 var revealInterval = setInterval(function () {
     if(!revealed){
         console.log("Reveal: Trial");
@@ -112,13 +113,15 @@ var revealInterval = setInterval(function () {
         } 
     }
 }, 30 * 1000);
-
+// This will try to start withdraw stage every 30 seconds. Only accounts 0 to ACCOUNTNUMBER are attended to lottery.
+// Math.LOG2E is the number that is used to convert ln result to log2. This is how log2 is done in geth as there is no Math.log2
+// function. 
 var withdrawInterval = setInterval(function () {
     console.log("Withdraw: Trial");
     var isSubmission = bulotNetwork.isSubmissionStage();
     var currentLotteryNo = bulotNetwork.getCurrentLotteryNo();
 
-    if (isSubmission && currentLotteryNo == 2) {
+    if (isSubmission && currentLotteryNo == 2) { // Withdraw condition, first lottery ended and it is submission stage
         eth.accounts.slice(0,ACCOUNTCOUNT).forEach(function (account, index) {
             personal.unlockAccount(account, '');
             for (var j = 0; j < Math.ceil(Math.LOG2E * Math.log(ACCOUNTCOUNT*10)); j++) {  // This is how log2 is taken in geth console
