@@ -7,7 +7,7 @@ var eip20network = web3.eth.contract(eip20abi).at(eip20address);
 var bulotAddress = "0x5f974edD3B8b244F33DE8bf6754b708517a63334";
 var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
 
-var ACCOUNTCOUNT = 100; // Number of accounts in the simulation
+var ACCOUNTCOUNT = 10; // Number of accounts in the simulation
 var coinBaseIndex = 0; // Sometimes index of the coinbase account becomes different
 var totalPrize = 0; // Total prize given, accumulated in withdraw stage
 // after creation of accounts, it will be found if it is different
