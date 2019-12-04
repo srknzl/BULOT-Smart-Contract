@@ -1,13 +1,15 @@
 loadScript('EIP20.js');
 loadScript('BULOTContract.js');
 
-var eip20address = "0x6b45b74d4Dc29e352dd920BEb475b3E66B6fA926";
+var eip20address = "0x731a10897d267e19B34503aD902d0A29173Ba4B1";
 var eip20network = web3.eth.contract(eip20abi).at(eip20address);
 
-var bulotAddress = "0xcD524e7c2D07B94ADB8bA29f978E38415089445B";
+var bulotAddress = "0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84";
 var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
 
-var ACCOUNTCOUNT = 20; // Number of accounts in the simulation
+var ACCOUNTCOUNT = 100; // Number of accounts in the simulation
+var coinBaseIndex = 0; // Sometimes index of the coinbase account becomes different
+// after creation of accounts, it will be founc if it is different
 /*
 
 Example 10 people simulation
@@ -26,7 +28,7 @@ personal.unlockAccount(eth.accounts[0], '');
 
 var accountNumber = eth.accounts.length;
 if (accountNumber < ACCOUNTCOUNT) {
-    console.log("Creating " + ACCOUNTCOUNT - accountNumber + " more accounts to make total accounts ", ACCOUNTCOUNT);
+    console.log("Creating " + (ACCOUNTCOUNT - accountNumber) + " more accounts to make total accounts ", ACCOUNTCOUNT);
     for (var i = 0; i < ACCOUNTCOUNT - accountNumber; i++) {
         personal.newAccount("");
     }
@@ -34,10 +36,16 @@ if (accountNumber < ACCOUNTCOUNT) {
 
 console.log("Making every accounts balance 10 ethers...");
 
-eth.accounts.slice(1).forEach(function (account) { // Send 10 ethers from account 0 to other accounts
+eth.accounts.forEach(function (account,index) { // Sometimes index of the coinbase account becomes different
+                                                // after creation of accounts, find it here
+    if(eth.getBalance(account) > new BigNumber(1e30) ){
+        coinBaseIndex = index;
+    }
+});
+eth.accounts.forEach(function (account, index) { // Send 10 ethers from account 0 to other accounts
     var balance = eth.getBalance(account);
-    if (balance < new BigNumber(1e9)) { // If account has less than 10 ethers send 10 ethers for gas costs 
-        var tx = { from: eth.accounts[0], to: account, value: new BigNumber(1e19).minus(balance) };
+    if (balance < new BigNumber(1e9) && index != coinBaseIndex) { // If account has less than 10 ethers send 10 ethers for gas costs 
+        var tx = { from: eth.accounts[coinBaseIndex], to: account, value: 1e19 };
         personal.sendTransaction(tx, "");
     }
 });
@@ -63,7 +71,7 @@ var revealed = false;
 
 
 // Ticket buying
-eth.accounts.forEach(function (account) {
+eth.accounts.forEach(function (account,index) {
     personal.unlockAccount(eth.accounts[0], '');
     eip20network.transfer(account, 10, {
         from: eth.accounts[0]
@@ -80,26 +88,27 @@ eth.accounts.forEach(function (account) {
     bulotNetwork.purchaseTicket(hashed, {
         from: account
     });
+    console.log("Account ",index," buys a ticket with random hashed ",hashed);
 });
 
 
 var revealInterval = setInterval(function () {
-    console.log("Reveal: Trial");
-    var isSubmission = bulotNetwork.isSubmissionStage();
-    if (!isSubmission && !revealed) {
-        eth.accounts.forEach(function (account, index) {
-            console.log("Account ",index," reveals his or her number ",randomNumbers[index]);
-            personal.unlockAccount(account, '');
-            bulotNetwork.revealNumber(randomNumbers[index], {
-                from: account
+    if(!revealed){
+        console.log("Reveal: Trial");
+        var isSubmission = bulotNetwork.isSubmissionStage();
+        if (!isSubmission) {
+            eth.accounts.forEach(function (account, index) {
+                console.log("Account ",index," reveals his or her number ",randomNumbers[index]);
+                personal.unlockAccount(account, '');
+                bulotNetwork.revealNumber(randomNumbers[index], {
+                    from: account
+                });
             });
-        });
-        revealed = true;
-    } else {
-        console.log("Reveal: 30 seconds for another trial.")
+            revealed = true;
+        } else {
+            console.log("Reveal: 30 seconds for another trial.")
+        } 
     }
-
-
 }, 30 * 1000);
 
 var withdrawInterval = setInterval(function () {
