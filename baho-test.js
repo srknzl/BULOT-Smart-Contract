@@ -32,13 +32,11 @@ if (accountNumber < ACCOUNTCOUNT) {
 
 console.log("Making every accounts balance 10 ethers...");
 
-eth.accounts.forEach(function (account, index) { // Send 10 ethers from account 0 to all others
-    if (index > 0) {
-        var balance = eth.getBalance(account);
-        if (balance < new BigNumber(1e9)) { // If account has less than 10 ethers send 10 ethers for gas costs 
-            var tx = { from: eth.accounts[0], to: account, value: new BigNumber(1e19).minus(balance) };
-            personal.sendTransaction(tx, "");
-        }
+eth.accounts.slice(1, accountNumber + 1).forEach(function (account) { // Send 10 ethers from account 0 to other accounts
+    var balance = eth.getBalance(account);
+    if (balance < new BigNumber(1e9)) { // If account has less than 10 ethers send 10 ethers for gas costs 
+        var tx = { from: eth.accounts[0], to: account, value: new BigNumber(1e19).minus(balance) };
+        personal.sendTransaction(tx, "");
     }
 });
 
@@ -51,7 +49,7 @@ var blockCreationInterval = setInterval(function () {
 
     personal.unlockAccount(eth.accounts[1], '');
     var tx = { from: eth.accounts[1], to: eth.accounts[0], value: new BigNumber(1e18) };
-    personal.sendTransaction(tx, "pass");
+    personal.sendTransaction(tx, "");
 
 }, 500);
 
