@@ -1,5 +1,13 @@
 loadScript('EIP20.js');
 loadScript('BULOTContract.js');
+
+var eip20address = "0x6b45b74d4Dc29e352dd920BEb475b3E66B6fA926";
+var eip20network = web3.eth.contract(eip20abi).at(eip20address);
+
+var bulotAddress = "0xcD524e7c2D07B94ADB8bA29f978E38415089445B";
+var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
+
+var ACCOUNTCOUNT = 20; // Number of accounts in the simulation
 /*
 
 Example 10 people simulation
@@ -12,12 +20,6 @@ Example 10 people simulation
     Account 3 -> 1
     Total 100
 */
-var eip20address = "0x54D5D818805fde3ffd09e97B101255e8fCD12D3C";
-var eip20network = web3.eth.contract(eip20abi).at(eip20address);
-
-var bulotAddress = "0x967eAC9db8eA9C33d10dAB45314BA737F29d4E30";
-var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
-var ACCOUNTCOUNT = 10; // Number of accounts in the simulation
 console.log("Number of accounts:", eth.accounts.length);
 
 personal.unlockAccount(eth.accounts[0], '');
@@ -32,7 +34,7 @@ if (accountNumber < ACCOUNTCOUNT) {
 
 console.log("Making every accounts balance 10 ethers...");
 
-eth.accounts.slice(1, accountNumber + 1).forEach(function (account) { // Send 10 ethers from account 0 to other accounts
+eth.accounts.slice(1).forEach(function (account) { // Send 10 ethers from account 0 to other accounts
     var balance = eth.getBalance(account);
     if (balance < new BigNumber(1e9)) { // If account has less than 10 ethers send 10 ethers for gas costs 
         var tx = { from: eth.accounts[0], to: account, value: new BigNumber(1e19).minus(balance) };
@@ -61,7 +63,7 @@ var revealed = false;
 
 
 // Ticket buying
-eth.accounts.forEach(function (account, index) {
+eth.accounts.forEach(function (account) {
     personal.unlockAccount(eth.accounts[0], '');
     eip20network.transfer(account, 10, {
         from: eth.accounts[0]

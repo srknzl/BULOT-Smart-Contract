@@ -1,10 +1,10 @@
 loadScript('EIP20.js');
 loadScript('BULOTContract.js');
 
-var eip20address = "0x4af1202B6F80a10Ec1b46852fC758affE9cBee00";
+var eip20address = "0x6b45b74d4Dc29e352dd920BEb475b3E66B6fA926";
 var eip20network = web3.eth.contract(eip20abi).at(eip20address);
 
-var bulotAddress = "0x2146276F32F36C9117964d7dba51E64E9F0E6453";
+var bulotAddress = "0xcD524e7c2D07B94ADB8bA29f978E38415089445B";
 var bulotNetwork = web3.eth.contract(bulotContract).at(bulotAddress);
 
 var purchaseTicketEvent = bulotNetwork.PurchaseTicket();
