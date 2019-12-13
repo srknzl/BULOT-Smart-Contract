@@ -5,7 +5,7 @@ import "./EIP20.sol";
 contract BULOT {
     struct Ticket {
         bytes32 hash;
-        uint purchasedAt;
+        bool revealed;
     }
     
     struct Game {
@@ -16,7 +16,7 @@ contract BULOT {
         mapping(address=>Ticket) players;
     }
     
-    uint constant STAGEDURATION = 2 * 60; // TODO: check the duration
+    uint constant STAGEDURATION = 1 minutes; // TODO: check the duration
     mapping(uint=>Game) public games;
     uint start;
     
@@ -38,15 +38,9 @@ contract BULOT {
     function getCurrentLotteryNo() public view returns (uint) {
         return (now - start) / STAGEDURATION + 1;
     }
-    
-    modifier validLotteryNo(uint lottery) {
-        require(lottery > 0, 'Invalid lottery number.');
-        _;
-    }
 
-    function purchaseTicket(bytes32 randomHashed, uint lottery) validLotteryNo(lottery) public returns(bool success) {
+    function purchaseTicket(bytes32 randomHashed) public returns(bool success) {
         uint lotteryNo = getCurrentLotteryNo();
-        require(lotteryNo == lottery, 'Cannot buy a ticket for any lottery other than the current one.');
         // prevents purchasing more than one ticket per lottery
         require(
             games[lotteryNo].players[msg.sender].hash == 0,
@@ -55,30 +49,28 @@ contract BULOT {
             network.transferFrom(msg.sender, address(this), 10),
             'The payment failed. Please allow the transfer of 10 TL to the address of that contract');
         games[lotteryNo].players[msg.sender].hash = randomHashed;
-        games[lotteryNo].players[msg.sender].purchasedAt = lotteryNo;
+        games[lotteryNo].players[msg.sender].revealed = false;
         games[lotteryNo].totalPrize += 10;
         emit PurchaseTicket(msg.sender, randomHashed);
         return true;
     }
     
-    function revealNumber(uint randomNum, uint lottery) validLotteryNo(lottery) public returns(bool success) {
-        uint lotteryNo = getCurrentLotteryNo();
-        require(
-            lotteryNo == lottery + 1,
-            'Cannot reveal your random number for any lottery other than the previously-closed submission stage\'s.');
+    function revealNumber(uint randomNum, uint lottery) public returns(bool success) {
+        require(lottery > 0, "Invalid lottery no.");
+        require(getCurrentLotteryNo() == lottery + 1, "Cannot reveal a number submitted in a lottery other than the previous one");
         // verifies the sender bought a ticket in the current lottery
         require(
-            games[lotteryNo].players[msg.sender].purchasedAt == lotteryNo,
-            "Haven't bought a ticket in the current lottery or already revealed your random number");
+            games[lottery].players[msg.sender].revealed == false,
+            "Haven't bought a ticket in the last lottery or already revealed your random number");
         // verifies the sender is revealing the number he committed in the submission stage
         bytes32 hashed = keccak256(randomNum, msg.sender);
         require(
-        games[lotteryNo].players[msg.sender].hash == hashed,
+        games[lottery].players[msg.sender].hash == hashed,
         'Failed submitted random number revelation attempt');
         
-        games[lotteryNo].revealedPlayers.push(msg.sender);
-        games[lotteryNo].randomNumber ^= randomNum;
-        delete games[lotteryNo].players[msg.sender].purchasedAt;
+        games[lottery].revealedPlayers.push(msg.sender);
+        games[lottery].randomNumber ^= randomNum;
+        games[lottery].players[msg.sender].revealed = true;
         emit RevealNumber(msg.sender, randomNum);
         return true;
     }
@@ -124,7 +116,7 @@ contract BULOT {
         uint lotteryNo = getCurrentLotteryNo();
         
         // cannot ask if the sender has won any prize in the future
-        require(_lotteryNo < lotteryNo, "The lottery with given number hasn't finished yet");        
+        require(_lotteryNo < lotteryNo - 1, "The lottery with given number hasn't finished yet");        
         
         Game storage gameAsked = games[_lotteryNo]; 
         uint M = gameAsked.totalPrize;  // total amount of money collected in the game with given number
